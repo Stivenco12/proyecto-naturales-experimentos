@@ -76,10 +76,10 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
 
     val topMarginPx = 40f
     val coilWidthPx = 40f
-    val naturalLengthPx = 120f
+    val naturalLengthPx = 140f
 
     val extensionMeters = (massKg * g) / max(kNpm, 1f)
-    val pxPerMeter = 200f
+    val pxPerMeter = 70f
     val totalLengthPxTarget = naturalLengthPx + extensionMeters * pxPerMeter
     val animatedLengthPx by animateFloatAsState(targetValue = totalLengthPxTarget)
 
