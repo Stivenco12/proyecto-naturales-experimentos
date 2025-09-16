@@ -3,7 +3,6 @@ package com.example.fsica_qumica
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,7 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.sqrt
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,7 +68,6 @@ fun LabeledValue(label: String, value: String) {
         Text(value, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
     }
 }
-
 @Composable
 fun SpringSimulator(modifier: Modifier = Modifier) {
     var massKg by remember { mutableStateOf(2f) }
@@ -77,18 +77,37 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
     val topMarginPx = 40f
     val coilWidthPx = 40f
     val naturalLengthPx = 140f
-
-    val extensionMeters = (massKg * g) / max(kNpm, 1f)
     val pxPerMeter = 70f
-    val totalLengthPxTarget = naturalLengthPx + extensionMeters * pxPerMeter
-    val animatedLengthPx by animateFloatAsState(targetValue = totalLengthPxTarget)
+
+    // ---------------------------
+    // Movimiento dinámico (MAS amortiguado)
+    // ---------------------------
+    val extensionEq = (massKg * g) / max(kNpm, 1f) // equilibrio
+    val omega = sqrt(kNpm / massKg) // frecuencia angular
+    val amplitude = extensionEq * 0.3f // amplitud inicial (30%)
+    val damping = 0.15f // factor de amortiguamiento (ajustable)
+
+    var time by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(massKg, kNpm) {
+        time = 0f
+        while (true) {
+            withFrameNanos {
+                time += 1 / 20f
+            }
+        }
+    }
+
+    // Ecuación con oscilación amortiguada
+    val extensionMeters = extensionEq + amplitude * kotlin.math.exp(-damping * time) * cos(omega * time)
+    val totalLengthPx = naturalLengthPx + extensionMeters * pxPerMeter
 
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            "Simulador de resorte (Ley de Hooke)",
+            "Simulador de resorte (Ley de Hooke con oscilaciones amortiguadas)",
             fontWeight = FontWeight.Bold,
             fontSize = 20.sp,
             textAlign = TextAlign.Center
@@ -100,7 +119,6 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
                 .height(320.dp),
             contentAlignment = Alignment.TopCenter
         ) {
-            // Guarda los colores antes del Canvas
             val primaryColor = MaterialTheme.colorScheme.primary
             val secondaryColor = MaterialTheme.colorScheme.secondary
             val tertiaryColor = MaterialTheme.colorScheme.tertiary
@@ -109,15 +127,17 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val centerX = size.width / 2f
                 val topY = topMarginPx
-                val bottomY = topMarginPx + animatedLengthPx
+                val bottomY = topY + totalLengthPx
 
+                // Soporte superior
                 drawLine(
                     color = primaryColor,
-                    start = Offset(x = centerX - 100f, y = topY - 10f),
-                    end = Offset(x = centerX + 100f, y = topY - 10f),
+                    start = Offset(centerX - 100f, topY - 10f),
+                    end = Offset(centerX + 100f, topY - 10f),
                     strokeWidth = 8f
                 )
 
+                // Resorte
                 val turns = 10
                 val segment = (bottomY - topY) / turns
                 val path = Path().apply {
@@ -138,6 +158,7 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6f)
                 )
 
+                // Bloque (masa)
                 val blockWidth = 80f
                 val blockHeight = 50f
                 drawRect(
@@ -146,6 +167,7 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
                     size = androidx.compose.ui.geometry.Size(blockWidth, blockHeight)
                 )
 
+                // Piso
                 drawLine(
                     color = outlineColor,
                     start = Offset(centerX - 120f, bottomY + blockHeight),
@@ -154,7 +176,6 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
                 )
             }
         }
-
 
         Spacer(Modifier.height(8.dp))
         Column(Modifier.fillMaxWidth()) {
@@ -167,18 +188,16 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(8.dp))
         ElevatedCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                LabeledValue("Extensión (m)", "%.3f m".format(extensionMeters))
+                LabeledValue("Extensión equilibrio (m)", "%.3f m".format(extensionEq))
+                LabeledValue("Extensión instantánea (m)", "%.3f m".format(extensionMeters))
                 LabeledValue("Fuerza elástica (N)", "%.2f N".format(kNpm * extensionMeters))
                 LabeledValue("Peso (N)", "%.2f N".format(massKg * g))
-                Text(
-                    "Nota: modelo cuasiestático (sin oscilaciones/damping).",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
             }
         }
     }
 }
+
 
 @Composable
 fun PressureCalculator(modifier: Modifier = Modifier) {
