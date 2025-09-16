@@ -107,7 +107,7 @@ fun SpringSimulator(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            "Simulador de resorte (Ley de Hooke con oscilaciones amortiguadas)",
+            "Simulador de la ley de Hooke con oscilaciones amortiguadas",
             fontWeight = FontWeight.Bold,
             fontSize = 20.sp,
             textAlign = TextAlign.Center
